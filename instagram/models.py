@@ -37,11 +37,24 @@ class Media(ApiModel):
         if 'user_has_liked' in entry:
             new_media.user_has_liked = entry['user_has_liked']
         new_media.like_count = entry['likes']['count']
+        
+        
+        if 'tags' in entry:
+            new_media.tags = entry['tags']
+        
+        new_media.likes = []
+        if entry['likes'].has_key('data'):
+            for like in entry['likes']['data']:
+                new_media.likes.append(User.object_from_dictionary(like))
 
         new_media.comment_count = entry['comments']['count']
         new_media.comments = []
         for comment in entry['comments']['data']:
             new_media.comments.append(Comment.object_from_dictionary(comment))
+
+        new_media.caption = None
+        if entry['caption']:
+            new_media.caption = Caption.object_from_dictionary(entry['caption'])
 
         new_media.created_time = timestamp_to_datetime(entry['created_time'])
 
@@ -72,10 +85,12 @@ class Comment(ApiModel):
         text = entry['text']
         created_at = timestamp_to_datetime(entry['created_time'])
         id = entry['id']
-        return Comment(id=id, user=user, text=text, created_at=created_at)
-
+        return cls(id=id, user=user, text=text, created_at=created_at) 
     def __unicode__(self):
         print "%s said \"%s\"" % (self.user.username, self.message)
+
+class Caption(Comment):
+    pass
 
 class Point(ApiModel):
     def __init__(self, latitude, longitude):
@@ -91,7 +106,7 @@ class Location(ApiModel):
     @classmethod
     def object_from_dictionary(cls, entry):
         point = None
-        if entry['latitude']:
+	if 'latitude' in entry:
             point = Point(entry.get('latitude'),
                           entry.get('longitude'))
         location = cls(entry.get('id'),
